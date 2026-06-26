@@ -4,6 +4,101 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>航拍图在卫星街区图中的位置定位</title>
+    <link rel="stylesheet" href="./static/css/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>航拍图在卫星街区图中的位置定位</h1>
+    </header>
+
+    <main class="page">
+      <section class="workspace">
+        <section class="connector-panel" aria-label="模型 API 接入">
+          <div class="connector-copy">
+            <h2>模型 API 接入</h2>
+            <div class="api-form">
+              <label>
+                接口地址
+                <input id="apiBaseUrl" type="url" value="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" autocomplete="off" />
+              </label>
+              <label>
+                API Key
+                <input id="apiKey" type="password" placeholder="sk-... / dashscope-..." autocomplete="off" />
+              </label>
+              <label>
+                Model
+                <input id="apiModel" type="text" value="qwen3.7-plus" placeholder="qwen3.7-plus" autocomplete="off" />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <div class="upload-grid">
+          <article class="upload-panel">
+            <div class="panel-head">
+              <h2>航拍局部图</h2>
+              <button type="button" class="secondary small" data-replace="uavInput">替换</button>
+            </div>
+            <label class="drop-zone" id="uavDrop" for="uavInput">
+              <input id="uavInput" type="file" accept="image/png,image/jpeg" />
+              <img id="uavPreview" alt="航拍局部图预览" hidden />
+            </label>
+          </article>
+
+          <article class="upload-panel">
+            <div class="panel-head">
+              <h2>卫星街区大图</h2>
+              <button type="button" class="secondary small" data-replace="satInput">替换</button>
+            </div>
+            <label class="drop-zone" id="satDrop" for="satInput">
+              <input id="satInput" type="file" accept="image/png,image/jpeg" />
+              <img id="satPreview" alt="卫星街区大图预览" hidden />
+            </label>
+          </article>
+        </div>
+
+        <div class="actions">
+          <button id="sampleBtn" type="button" class="secondary">加载示例</button>
+          <button id="startBtn" type="button" class="primary" disabled>开始定位</button>
+          <button id="testBtn" type="button" class="secondary">测试模型连接</button>
+        </div>
+        <div id="notice" class="notice" role="status" hidden></div>
+      </section>
+
+      <section id="stagePanel" class="stage-panel" hidden>
+        <h2>真实处理进度</h2>
+        <strong id="stageText">等待任务开始</strong>
+        <ol id="progressList" class="progress-list" aria-label="定位任务进度"></ol>
+      </section>
+
+      <section id="resultPanel" class="result-panel" hidden>
+        <div class="result-head">
+          <div>
+            <span class="status-badge localized">定位完成</span>
+            <h2 id="resultMessage">红框已回写到原始卫星图</h2>
+          </div>
+        </div>
+
+        <figure class="annotated-figure">
+          <img id="annotatedImage" alt="带红框定位结果的卫星大图" />
+        </figure>
+
+        <section class="reason-panel">
+          <h3>匹配依据</h3>
+          <div id="reasonText" class="reason-text">暂无</div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./static/js/app.js"></script>
+  </body>
+</html>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>航拍图在卫星街区图中的位置定位</title>
     <style>
 :root {
   color-scheme: light;
