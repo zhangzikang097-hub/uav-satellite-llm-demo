@@ -17,6 +17,8 @@ const settings = {
   maxLevels: 1,
   minRegionSize: 320,
   contextRatio: 0.25,
+  finalBoxScale: 0.55,
+  finalBoxMinSide: 180,
   maxTilesPerLevel: 16,
   llmMaxImageSide: 768,
   jpegQuality: 0.6
@@ -199,8 +201,14 @@ function slidingSpans(length, tileLength, stride) {
   return starts.map((start) => [start, Math.min(length, start + tileLength)]);
 }
 
+function tileSizeForLevel(sourceBox, level) {
+  const maxSide = Math.max(sourceBox.width, sourceBox.height);
+  if (level === 1) return Math.min(settings.tileSize, maxSide);
+  return Math.min(settings.tileSize, Math.max(settings.minRegionSize, Math.ceil(maxSide * 0.55)));
+}
+
 function createAdaptiveTiles(image, sourceBox, level) {
-  let effectiveTileSize = Math.min(settings.tileSize, Math.max(sourceBox.width, sourceBox.height));
+  let effectiveTileSize = tileSizeForLevel(sourceBox, level);
   let xSpans = [];
   let ySpans = [];
   while (true) {
@@ -297,6 +305,39 @@ function expandBBox(bbox, image, ratio) {
   const y0 = clamp(bbox.y0 - padY, 0, image.naturalHeight);
   const x1 = clamp(bbox.x1 + padX, 0, image.naturalWidth);
   const y1 = clamp(bbox.y1 + padY, 0, image.naturalHeight);
+  return { x0, y0, x1, y1, width: x1 - x0, height: y1 - y0 };
+}
+
+function estimateFinalBBox(tileBBox, uavImage, satelliteImage) {
+  const aspect = clamp(uavImage.naturalWidth / Math.max(1, uavImage.naturalHeight), 0.5, 2);
+  const maxW = tileBBox.width * settings.finalBoxScale;
+  const maxH = tileBBox.height * settings.finalBoxScale;
+  let width = maxW;
+  let height = width / aspect;
+  if (height > maxH) {
+    height = maxH;
+    width = height * aspect;
+  }
+
+  const minSide = Math.min(settings.finalBoxMinSide, tileBBox.width, tileBBox.height);
+  if (Math.min(width, height) < minSide) {
+    if (width < height) {
+      width = minSide;
+      height = width / aspect;
+    } else {
+      height = minSide;
+      width = height * aspect;
+    }
+  }
+
+  width = Math.min(Math.round(width), tileBBox.width);
+  height = Math.min(Math.round(height), tileBBox.height);
+  const centerX = (tileBBox.x0 + tileBBox.x1) / 2;
+  const centerY = (tileBBox.y0 + tileBBox.y1) / 2;
+  const x0 = clamp(Math.round(centerX - width / 2), tileBBox.x0, tileBBox.x1 - width);
+  const y0 = clamp(Math.round(centerY - height / 2), tileBBox.y0, tileBBox.y1 - height);
+  const x1 = clamp(x0 + width, 0, satelliteImage.naturalWidth);
+  const y1 = clamp(y0 + height, 0, satelliteImage.naturalHeight);
   return { x0, y0, x1, y1, width: x1 - x0, height: y1 - y0 };
 }
 
@@ -519,7 +560,8 @@ async function runLocalization() {
 
     if (!finalTile || !finalSelection) throw new Error("定位流程没有产生最终候选框。");
     pushProgress("annotate", "正在使用浏览器端坐标换算结果，在原始卫星图上绘制最终红框。");
-    const annotated = annotateSatellite(state.satImage, finalTile.bbox);
+    const finalBbox = estimateFinalBBox(finalTile.bbox, state.uavImage, state.satImage);
+    const annotated = annotateSatellite(state.satImage, finalBbox);
     $("annotatedImage").src = annotated.toDataURL("image/png");
     $("resultMessage").textContent = "定位完成";
     $("reasonText").textContent = finalSelection.reason;
